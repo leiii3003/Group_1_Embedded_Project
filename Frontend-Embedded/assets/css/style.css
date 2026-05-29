@@ -2,7 +2,7 @@
    AgroSense – style.css
    Smart Irrigation Dashboard
 ═══════════════════════════════════════════════ */
-
+ 
 :root {
   --green-header:  #1e3d1e;
   --green-dark:    #27500a;
@@ -23,9 +23,9 @@
   --shadow-sm:     0 1px 4px rgba(30,70,30,.07);
   --shadow-md:     0 2px 10px rgba(30,70,30,.13);
 }
-
+ 
 *, *::before, *::after { box-sizing: border-box; }
-
+ 
 html, body {
   margin: 0; padding: 0;
   font-family: 'DM Sans', sans-serif;
@@ -34,7 +34,7 @@ html, body {
   min-height: 100vh;
   font-size: 16px;
 }
-
+ 
 /* ── Navbar ───────────────────────────────────── */
 .agro-nav {
   background: var(--green-header);
@@ -54,7 +54,7 @@ html, body {
   color: #86efac; letter-spacing: -.3px;
 }
 .nav-subtitle { font-size: 1rem; color: rgba(255,255,255,.5); font-weight: 500; }
-
+ 
 /* ── Base stat card ───────────────────────────── */
 .stat-card {
   background: var(--card-bg);
@@ -68,7 +68,7 @@ html, body {
   transition: box-shadow .2s;
 }
 .stat-card:hover { box-shadow: var(--shadow-md); }
-
+ 
 .stat-label {
   font-size: .8rem; font-weight: 600;
   color: var(--text-muted);
@@ -83,7 +83,7 @@ html, body {
 .stat-value.humidity   { color: var(--gray-val); }
 .stat-meta { font-size: .88rem; color: var(--text-muted); margin-top: -2px; }
 .stat-sub  { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
-
+ 
 .stat-badge {
   display: inline-block; font-size: .78rem; font-weight: 600;
   padding: 3px 11px; border-radius: 20px; width: fit-content;
@@ -94,7 +94,7 @@ html, body {
 .badge-anoxia  { background:#fce8e8; color:#791f1f; }
 .badge-on      { background:var(--green-light); color:var(--green-dark); border:1px solid var(--green-soft); }
 .badge-off     { background:#f0f0f0; color:#555; }
-
+ 
 /* ── Soil telemetry extras ────────────────────── */
 .vwc-display {
   display: flex;
@@ -126,7 +126,7 @@ html, body {
   font-size: .84rem; font-weight: 700; color: var(--text-primary);
   margin-bottom: 4px;
 }
-
+ 
 /* ── Gauge tile (Temperature & Humidity cards) ── */
 .stat-card-gauge {
   padding-bottom: .9rem;
@@ -160,7 +160,7 @@ html, body {
 .status-hot      { color: #922b21; }
 .status-dry-air  { color: #d4ac0d; }
 .status-humid    { color: #1a5276; }
-
+ 
 /* ── Pump card ────────────────────────────────── */
 .pump-card {
   align-items: center;
@@ -168,14 +168,14 @@ html, body {
   padding: 1.2rem 1rem 1rem;
   gap: 6px;
 }
-
+ 
 .pump-icon-wrap {
   margin: 6px auto 4px;
   position: relative;
   width: 72px; height: 72px;
   display: flex; align-items: center; justify-content: center;
 }
-
+ 
 /* animated ring around pump icon */
 .pump-ring {
   width: 72px; height: 72px;
@@ -195,19 +195,19 @@ html, body {
   box-shadow: none;
   animation: none;
 }
-
+ 
 @keyframes ring-pulse {
   0%,100% { box-shadow: 0 0 0 4px rgba(151,196,89,.18), 0 0 16px rgba(59,109,17,.12); }
   50%      { box-shadow: 0 0 0 8px rgba(151,196,89,.08), 0 0 24px rgba(59,109,17,.20); }
 }
-
+ 
 .pump-icon-big {
   font-size: 2rem;
   transition: color .3s;
 }
 .pump-on-color  { color: var(--green-mid); }
 .pump-off-color { color: #bbb; }
-
+ 
 /* runtime / cycles mini row */
 .pump-stats-row {
   display: flex;
@@ -234,13 +234,13 @@ html, body {
 }
 .pump-stat-key { font-size: .68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
 .pump-stat-divider { width: 1px; height: 32px; background: var(--border-color); }
-
+ 
 .pump-mode-row {
   font-size: .78rem; color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
   gap: 3px;
 }
-
+ 
 /* ── Panel cards ──────────────────────────────── */
 .panel-card {
   background: var(--card-bg);
@@ -257,11 +257,11 @@ html, body {
   margin-bottom: 1rem;
   display: flex; align-items: center;
 }
-
+ 
 /* ── Controls ─────────────────────────────────── */
 .ctrl-label { font-size: .88rem; color: var(--text-muted); font-weight: 500; }
 .ctrl-val   { font-size: .88rem; color: var(--text-primary); font-weight: 600; }
-
+ 
 .btn-agro {
   border: none; border-radius: 7px;
   padding: .5rem 1.2rem;
@@ -277,7 +277,7 @@ html, body {
   border: 1px solid var(--green-soft);
 }
 .btn-water:hover { background: var(--green-soft); }
-
+ 
 /* ── Toggle switch ────────────────────────────── */
 .agro-toggle { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
 .agro-toggle input { opacity:0; width:0; height:0; }
@@ -294,7 +294,7 @@ html, body {
 .agro-toggle input:checked + .agro-slider { background: var(--green-mid); }
 .agro-toggle input:checked + .agro-slider::before { transform: translateX(22px); }
 .toggle-state-label { font-size:.95rem; font-weight:700; color:var(--green-mid); min-width:28px; }
-
+ 
 /* ── Range sliders ────────────────────────────── */
 .agro-range {
   -webkit-appearance: none;
@@ -310,7 +310,7 @@ html, body {
   box-shadow: 0 1px 3px rgba(0,0,0,.15); transition: transform .1s;
 }
 .agro-range::-webkit-slider-thumb:hover { transform:scale(1.15); }
-
+ 
 /* ── Crop tabs ────────────────────────────────── */
 .crop-tabs { display:flex; gap:8px; }
 .crop-tab {
@@ -331,7 +331,7 @@ html, body {
 .param-row:last-child { border-bottom:none; }
 .param-key { color:var(--text-muted); }
 .param-val { color:var(--green-mid); font-weight:600; }
-
+ 
 /* ── Chart cards ──────────────────────────────── */
 .chart-card {
   background:var(--card-bg); border:1px solid var(--border-color);
@@ -355,7 +355,7 @@ html, body {
 .legend-swatch { display:inline-block; width:16px; height:2px; border-radius:1px; vertical-align:middle; margin-right:3px; }
 .swatch-optimal { background:var(--green-mid); }
 .swatch-low     { background:#ba7517; }
-
+ 
 /* ── Ambient environment ──────────────────────── */
 .env-divider { width:1px; height:80px; background:var(--border-color); align-self:center; }
 .comfort-block { min-width:200px; }
@@ -368,7 +368,7 @@ html, body {
 .status-moderate-text { color:#854f0b; }
 .status-low-text      { color:var(--green-dark); }
 .status-elevated-text { color:#534ab7; }
-
+ 
 /* ── Status footer bars ───────────────────────── */
 .status-bar {
   background:var(--card-bg); border:1px solid var(--border-color);
@@ -377,7 +377,7 @@ html, body {
   font-size:.92rem; color:var(--text-muted); box-shadow:var(--shadow-sm);
 }
 .status-icon { font-size:1.3rem; color:var(--green-mid); }
-
+ 
 /* ── Responsive ───────────────────────────────── */
 @media (max-width:576px) {
   .agro-nav { flex-wrap:wrap; gap:.3rem; }
@@ -387,23 +387,33 @@ html, body {
   .comfort-key { min-width:90px; }
   .pump-card { padding:1rem .8rem; }
 }
-
+ 
 /* ── Actuation grid layout ────────────────────── */
 .actuation-grid {
   display: grid;
   grid-template-columns: 200px 1px 1fr;
   gap: 0 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
-.actuation-left  { display: flex; flex-direction: column; }
-.actuation-right { display: flex; flex-direction: column; }
+.actuation-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+.actuation-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
 .actuation-divider {
   background: var(--border-color);
   width: 1px;
   align-self: stretch;
   margin: 0 .25rem;
 }
-
+ 
 /* ── Info pills (last watered / water used) ───── */
 .act-info-grid {
   display: flex;
@@ -436,17 +446,27 @@ html, body {
   text-transform: uppercase;
   letter-spacing: .04em;
 }
-
+ 
 /* ── Range hint text ──────────────────────────── */
 .range-hint {
   font-size: .72rem;
   color: var(--text-muted);
   margin-top: 4px;
 }
-
+ 
+/* ── Command sync state lines (smaller for breathing room) ── */
+#commandSyncState,
+#commandVersionState {
+  font-size: .62rem;
+  color: var(--text-muted);
+  opacity: .7;
+  line-height: 1.55;
+  margin-top: 0;
+}
+ 
 /* ── Warn-coloured range thumb ────────────────── */
 .agro-range-warn::-webkit-slider-thumb { background: #b85c00; }
-
+ 
 /* ── Ambient compact card ─────────────────────── */
 .ambient-compact {
   padding: 1.2rem 1.5rem 1.1rem;
@@ -460,7 +480,7 @@ html, body {
 .ambient-compact .comfort-row {
   margin-bottom: 8px;
 }
-
+ 
 /* ── Responsive actuation grid ────────────────── */
 @media (max-width: 640px) {
   .actuation-grid {
@@ -471,7 +491,7 @@ html, body {
     width: 100%; height: 1px;
   }
 }
-
+ 
 /* ── VWC card — maximise space usage ─────────── */
 .vwc-card {
   justify-content: space-between;
@@ -495,7 +515,7 @@ html, body {
   border-radius: 8px;
   line-height: 1.5;
 }
-
+ 
 /* ── Status bars — stretch to match ambient height ── */
 .status-bar-tall {
   flex: 1;
@@ -506,7 +526,7 @@ html, body {
 .status-bar-tall .status-icon {
   font-size: 1.5rem;
 }
-
+ 
 /* ── Multi-crop VWC rows ──────────────────────── */
 .crop-vwc-row {
   display: flex;
@@ -548,14 +568,14 @@ html, body {
   background: var(--border-color);
   margin: 8px 0 6px;
 }
-
+ 
 /* ── Chart header with two dropdowns ─────────── */
 .chart-header-controls {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
+ 
 /* ── VWC dual-crop rows ───────────────────────── */
 .vwc-crop-row {
   display: flex;
@@ -614,14 +634,14 @@ html, body {
   border-radius: 20px !important;
   white-space: nowrap;
 }
-
+ 
 /* ── Chart header dual controls ──────────────── */
 .chart-header-controls {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
+ 
 /* ── VWC status footer inside tile ───────────── */
 .vwc-status-footer {
   margin-top: 8px;
@@ -641,14 +661,14 @@ html, body {
   line-height: 1.4;
   white-space: normal;
 }
-
+ 
 /* ── Manual mode hint ─────────────────────────── */
 .act-mode-hint {
   font-size: .72rem;
   color: var(--text-muted);
   line-height: 1.4;
 }
-
+ 
 /* ── Burst mode hint ──────────────────────────── */
 .burst-mode-hint {
   font-size: .72rem;
@@ -656,17 +676,17 @@ html, body {
   line-height: 1.4;
   font-style: italic;
 }
-
+ 
 /* ── Smaller control label (burst sub-sliders) ── */
 .ctrl-label-sm {
   font-size: .82rem;
   color: var(--text-muted);
   font-weight: 500;
 }
-
+ 
 /* ── Burst delay range thumb colour ──────────── */
 .agro-range-delay::-webkit-slider-thumb { background: #2e86c1; }
-
+ 
 /* ── Planting date row in crop profile ───────── */
 .plant-date-row {
   background: var(--page-bg);
@@ -715,113 +735,65 @@ html, body {
   transition: color .15s;
 }
 .plant-date-clear:hover { color: #c0392b; }
-
-/* ── Navbar link buttons ──────────────────────── */
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: .25rem;
+ 
+/* ── Well water level pill ────────────────────── */
+.act-pill-well {
+  align-items: flex-start;
+  gap: 8px;
 }
-.nav-link {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: rgba(255,255,255,.7);
-  font-size: .88rem;
-  font-weight: 500;
-  padding: .4rem .85rem;
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  transition: background .15s, color .15s, border-color .15s;
-  display: inline-flex;
-  align-items: center;
-}
-.nav-link:hover {
-  background: rgba(255,255,255,.08);
-  color: #fff;
-}
-.nav-link.active {
-  background: rgba(134,239,172,.15);
-  border-color: rgba(134,239,172,.35);
-  color: #86efac;
-  font-weight: 600;
-}
-
-/* ── Mode badge variants ──────────────────────── */
-.badge-auto   { background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; }
-.badge-manual { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
-
-/* ── ESP32 status badge variants ─────────────── */
-.badge-esp-online  { background:var(--green-light); color:var(--green-dark); border:1px solid var(--green-soft); }
-.badge-esp-stale   { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
-.badge-esp-offline { background:#f0f0f0; color:#555; border:1px solid #ddd; }
-
-/* ── Chart icon ───────────────────────────────── */
-.chart-icon { font-size: .95rem; }
-
-/* ── Members grid & cards ─────────────────────── */
-.members-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.25rem;
-}
-.member-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--card-radius);
-  box-shadow: var(--shadow-sm);
-  padding: 1.5rem 1.25rem 1.2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .75rem;
-  text-align: center;
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity .35s ease, transform .35s ease, box-shadow .2s;
-}
-.member-card:hover { box-shadow: var(--shadow-md); }
-.member-card.member-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.member-photo-frame {
-  width: 90px; height: 90px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid var(--green-light);
+ 
+.well-icon-wrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-}
-.member-photo-frame img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.member-info {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  overflow: hidden;
 }
-.member-name {
-  font-size: .95rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
+ 
+.well-icon {
+  font-size: 1.25rem;
+  color: var(--green-mid);
+  position: relative;
+  z-index: 2;
 }
-.member-badge {
-  font-size: .72rem;
+ 
+.well-level-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: rgba(59,109,17,0.45);
+  border-radius: 2px;
+  transition: height .5s ease, background .4s ease;
+  z-index: 1;
+}
+ 
+.act-pill-pct {
+  font-size: .78rem;
   font-weight: 700;
-  padding: 2px 12px;
-  border-radius: 20px;
-  background: var(--green-light);
-  color: var(--green-dark);
-  border: 1px solid var(--green-soft);
-  text-transform: uppercase;
-  letter-spacing: .05em;
+  color: var(--green-mid);
+  transition: color .3s;
 }
-
-/* ── Plant age / stage display ────────────────── */
+ 
+.well-progress-wrap {
+  width: 100%;
+  height: 4px;
+  background: #e8f0e8;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+ 
+.well-progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--green-mid);
+  transition: width .5s ease, background .4s ease;
+}
 .plant-age-row {
   display: flex;
   align-items: center;
@@ -847,4 +819,90 @@ html, body {
   color: var(--green-dark);
   border: 1px solid var(--green-soft);
   margin-left: 2px;
+}
+
+.members-hero {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--green-accent);
+  border-radius: 0 var(--card-radius) var(--card-radius) 0;
+  padding: 1.6rem 2rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+.members-hero-eyebrow {
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--green-mid);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  margin-bottom: .4rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.members-hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 .25rem;
+  line-height: 1.2;
+}
+.members-hero-course {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--green-mid);
+  margin: 0 0 .4rem;
+}
+.members-hero-desc {
+  font-size: .85rem;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 100%;
+  line-height: 1.6;
+}
+.members-hero-stats {
+  display: flex;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+.members-stat-pill {
+  background: var(--page-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: .85rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+}
+.members-stat-num {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green-mid);
+  line-height: 1;
+}
+.members-stat-lbl {
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* ── Leader badge ─────────────────────────────── */
+.badge-leader {
+  background: #fef9e7;
+  color: #7d5a00;
+  border: 1px solid #f0c040;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+@media (max-width: 768px) {
+  .members-hero { flex-direction: column; align-items: flex-start; gap: 1.2rem; }
+  .members-hero-stats { width: 100%; justify-content: flex-start; }
 }
