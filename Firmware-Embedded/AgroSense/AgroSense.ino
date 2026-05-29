@@ -116,6 +116,9 @@ bool          prevDesiredPumpOn = false;  // Used to detect rising edge in slowP
 bool          pumpOutputOn      = false;
 unsigned long pwmPhaseStartMs   = 0;
 String        activeCrop        = "Tomato";
+String        previousCrop      = "Tomato"; // Saved before manual watering to restore after
+int           lastServoCommandVersion = 0;  // Tracks last ACK'd servo command version
+int           lastPumpCommandVersion  = 0;  // Tracks last ACK'd pump command version
 
 // ============================================================
 // Timing
@@ -171,6 +174,12 @@ unsigned long lastSelectPressMs = 0;
 unsigned long lastBackPressMs   = 0;
 unsigned long lastModePressMs   = 0;
 const unsigned long DEBOUNCE_MS = 200;
+
+// Button edge detection — tracks previous state to fire only on falling edge
+bool prevBtnMode   = HIGH;
+bool prevBtnNext   = HIGH;
+bool prevBtnSelect = HIGH;
+bool prevBtnBack   = HIGH;
 
 // ============================================================
 // Utility
@@ -378,54 +387,70 @@ void syncWithServer() {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-API-Key", API_KEY);
 
-  StaticJsonDocument<512> payload;
-  payload["device_id"]   = DEVICE_ID;
-  payload["moisture1"]   = moisture1Pct;
+  StaticJsonDocument<640> payload;
+  payload["device_id"]         = DEVICE_ID;
+  payload["moisture1"]         = moisture1Pct;
   if (HAS_SENSOR2) payload["moisture2"] = moisture2Pct;
-  payload["moisture"]    = moistureAvgPct;
-  payload["temperature"] = temperatureC;
-  payload["humidity"]    = humidityPct;
-  payload["flow_ml"]     = flowMl;
-  payload["pump_on"]     = pumpOutputOn;
-  payload["mode"]        = (currentMode == MODE_AUTO) ? "AUTO" : "MANUAL";
-  payload["active_crop"] = activeCrop;
+  payload["moisture"]          = moistureAvgPct;
+  payload["temperature"]       = temperatureC;
+  payload["humidity"]          = humidityPct;
+  payload["flow_ml"]           = flowMl;
+  payload["pump_on"]           = pumpOutputOn;
+  payload["mode"]              = (currentMode == MODE_AUTO) ? "AUTO" : "MANUAL";
+  payload["active_crop"]       = activeCrop;
+  payload["servo_ack_version"] = lastServoCommandVersion;
+  payload["pump_ack_version"]  = lastPumpCommandVersion;
 
   String body;
   serializeJson(payload, body);
 
   const int statusCode = http.POST(body);
   if (statusCode > 0) {
-    const String            responseBody = http.getString();
-    StaticJsonDocument<768> response;
+    const String             responseBody = http.getString();
+    StaticJsonDocument<1024> response;
     const DeserializationError err = deserializeJson(response, responseBody);
 
-    if (!err && currentMode == MODE_AUTO) {
-      // Only accept server overrides in AUTO mode
-      if (response.containsKey("pump_command"))
-        desiredPumpOn = response["pump_command"].as<bool>();
-
-      if (response.containsKey("moisture_on_threshold"))
-        moistureOnThreshold = response["moisture_on_threshold"].as<float>();
-
-      if (response.containsKey("moisture_off_threshold"))
-        moistureOffThreshold = response["moisture_off_threshold"].as<float>();
-
-      if (response.containsKey("pwm_on_ms"))
-        slowPwmOnMs = response["pwm_on_ms"].as<unsigned long>();
-
-      if (response.containsKey("pwm_off_ms"))
-        slowPwmOffMs = response["pwm_off_ms"].as<unsigned long>();
-
-      if (response.containsKey("active_crop")) {
+    if (!err) {
+      // ---- Servo / crop: apply in both AUTO and MANUAL (when not actively watering) ----
+      if (!manualWateringActive && response.containsKey("active_crop")) {
         const char* nextCropRaw = response["active_crop"].as<const char*>();
         if (nextCropRaw != nullptr) {
           const String nextCrop(nextCropRaw);
           if (nextCrop.length() > 0 && nextCrop != activeCrop) {
+            Serial.print("[servo] crop ");
+            Serial.print(activeCrop);
+            Serial.print(" -> ");
+            Serial.println(nextCrop);
             activeCrop = nextCrop;
             updateServoForCrop(activeCrop);
             lcdNeedsRedraw = true;
           }
         }
+      }
+      // ACK the servo command version the server sent
+      if (response.containsKey("servo_command_version"))
+        lastServoCommandVersion = response["servo_command_version"].as<int>();
+
+      // ---- Pump / thresholds: AUTO mode only ----
+      if (currentMode == MODE_AUTO) {
+        if (response.containsKey("pump_command"))
+          desiredPumpOn = response["pump_command"].as<bool>();
+
+        if (response.containsKey("moisture_on_threshold"))
+          moistureOnThreshold = response["moisture_on_threshold"].as<float>();
+
+        if (response.containsKey("moisture_off_threshold"))
+          moistureOffThreshold = response["moisture_off_threshold"].as<float>();
+
+        if (response.containsKey("pwm_on_ms"))
+          slowPwmOnMs = response["pwm_on_ms"].as<unsigned long>();
+
+        if (response.containsKey("pwm_off_ms"))
+          slowPwmOffMs = response["pwm_off_ms"].as<unsigned long>();
+
+        // ACK the pump command version the server sent
+        if (response.containsKey("pump_command_version"))
+          lastPumpCommandVersion = response["pump_command_version"].as<int>();
       }
     }
 
@@ -669,6 +694,7 @@ void renderLcd() {
 // ============================================================
 
 void startManualWatering(const String& crop) {
+  previousCrop         = activeCrop; // Save so servo can return after watering
   manualTargetCrop     = crop;
   manualWateringActive = true;
   manualWaterStartMs   = millis();
@@ -681,6 +707,15 @@ void startManualWatering(const String& crop) {
 
 void stopManualWatering() {
   setPumpOutput(false);
+  // Restore servo to the crop that was active before manual watering started
+  if (previousCrop != manualTargetCrop) {
+    Serial.print("[servo] restore ");
+    Serial.print(manualTargetCrop);
+    Serial.print(" -> ");
+    Serial.println(previousCrop);
+    activeCrop = previousCrop;
+    updateServoForCrop(activeCrop);
+  }
   manualWateringActive = false;
   currentScreen  = SCREEN_MANUAL_DONE;
   lcdNeedsRedraw = true;
@@ -978,13 +1013,21 @@ void loop() {
     lcdNeedsRedraw  = true;
   }
 
-  // MODE button — momentary push, debounced toggle
-  if (digitalRead(BTN_MODE)   == LOW) handleModeButton();
+  // Edge-detected button reads — fire handler only on falling edge (HIGH → LOW)
+  bool currBtnMode   = digitalRead(BTN_MODE);
+  bool currBtnNext   = digitalRead(BTN_NEXT);
+  bool currBtnSelect = digitalRead(BTN_SELECT);
+  bool currBtnBack   = digitalRead(BTN_BACK);
 
-  // Momentary buttons — debounced
-  if (digitalRead(BTN_NEXT)   == LOW) handleNextButton();
-  if (digitalRead(BTN_SELECT) == LOW) handleSelectButton();
-  if (digitalRead(BTN_BACK)   == LOW) handleBackButton();
+  if (currBtnMode   == LOW && prevBtnMode   == HIGH) handleModeButton();
+  if (currBtnNext   == LOW && prevBtnNext   == HIGH) handleNextButton();
+  if (currBtnSelect == LOW && prevBtnSelect == HIGH) handleSelectButton();
+  if (currBtnBack   == LOW && prevBtnBack   == HIGH) handleBackButton();
+
+  prevBtnMode   = currBtnMode;
+  prevBtnNext   = currBtnNext;
+  prevBtnSelect = currBtnSelect;
+  prevBtnBack   = currBtnBack;
 
   // Render LCD only when needed
   renderLcd();
