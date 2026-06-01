@@ -1,5 +1,6 @@
 .vercel
 .env*
+**/secrets.h
 **/node_modules
 *.db-wal
 *.db-shm

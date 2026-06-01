@@ -3,16 +3,16 @@
  
 /* ---- Sensor state ---- */
 const state = {
-  moisture: 38.4,
-  temperature: 27.2,
-  humidity: 65.2,
+  moisture: null,
+  temperature: null,
+  humidity: null,
   pumpOn: false,
   dataLogged: 0,
   cropActive: 'Tomato',
   pumpCycles: 0,
   waterUsedML: 0,
   wellWaterML: null,        // Well water level in mL (null = no data)
-  wellCapacityML: 10000,    // Default well capacity 10 L
+  wellCapacityML: 1000,     // Default well capacity 1 L (matches backend default)
   lastWateredSecs: null,
   pumpSeconds: 0,
   activeChartCrop: 'Tomato',
@@ -23,7 +23,18 @@ const state = {
   esp32LastSeenMs: null,
   dataReceived: false,
   manualMode: false,                  // Change 1: manual mode toggle state
-  plantingDates: { Tomato: null, Pechay: null }  // Change 6: planting dates per crop
+  plantingDates: { Tomato: null, Pechay: null },  // Change 6: planting dates per crop
+  latestThresholds: {
+    Tomato: { on: 60, off: 95 },
+    Pechay: { on: 80, off: 95 }
+  },
+  soilProfile: {
+    soilType: 'Regular loam',
+    fc: 29,
+    pwp: 12,
+    aw: 17,
+    sensorCalibrated: false
+  }
 };
  
 /* ---- API / WS config ---- */
@@ -52,29 +63,47 @@ const C_TICK         = '#7a9178';
 const CROPS = {
   Tomato: [
     ['Daily VW demand', '600-1,200 mL'],
-    ['FAO-56 Kc (mid)', '1.15'],
-    ['Kc (late)',        '0.70'],
+    ['FAO-56 Kc (initial)', '0.40'],
+    ['FAO-56 Kc (mid)', '1.12 - 1.18'],
+    ['FAO-56 Kc (late)', '0.86'],
     ['Root depth',       '60-150 cm'],
-    ['MAD threshold',    '40%']
+    ['MAD threshold',    '20 - 40%'],
+    ['Field Capacity',   '~29% VWC (loam)'],
+    ['Permanent Wilting Point', '~12% VWC'],
+    ['Soil type',        'Regular loam'],
+    ['Irrigation type',  'Deep soaking, infrequent']
   ],
   Pechay: [
     ['Daily VW demand', '150-300 mL'],
-    ['FAO-56 Kc (mid)', '0.95'],
-    ['Kc (late)',        '0.85'],
-    ['Root depth',       '15-30 cm'],
-    ['MAD threshold',    '35%']
+    ['FAO-56 Kc (initial)', '0.35'],
+    ['FAO-56 Kc (mid)', '0.70 - 1.05'],
+    ['Root depth',       '10-30 cm'],
+    ['MAD threshold',    '10 - 20%'],
+    ['Field Capacity',   '~29% VWC (loam)'],
+    ['Permanent Wilting Point', '~12% VWC'],
+    ['Soil type',        'Regular loam'],
+    ['Waterlogging limit', '< 48-72 hours'],
+    ['Irrigation type',  'Shallow trickle, frequent']
   ]
 };
  
 /* ---- Plant stage thresholds (Change 6) ---- */
-function getPlantStage(days) {
-  if (days < 0)   return '—';
-  if (days <= 7)  return 'Germination';
+function getPlantStage(days, crop = state.cropActive) {
+  if (days < 0)   return '--';
+
+  if (crop === 'Pechay') {
+    if (days <= 3)  return 'Germination';
+    if (days <= 14) return 'Seedling';
+    if (days <= 40) return 'Mid-season';
+    return 'Harvest-ready';
+  }
+
+  if (days <= 3)  return 'Germination';
   if (days <= 21) return 'Seedling';
-  if (days <= 45) return 'Vegetative';
+  if (days <= 42) return 'Vegetative';
   if (days <= 70) return 'Flowering';
   if (days <= 90) return 'Fruiting';
-  return 'Mature';
+  return 'Ripening';
 }
  
 let lineChart;
@@ -165,15 +194,21 @@ function humStatus(h) {
   return ['Humid', 'status-humid'];
 }
  
-function moistureBadge(v) {
-  if (v < 30) return ['DRY - Approaching Management Allowed Depletion', 'badge-dry'];
-  if (v > 70) return ['ANOXIA RISK - Soil Saturation Dangerously High', 'badge-anoxia'];
+function getThresholdsForCrop(crop) {
+  return state.latestThresholds[crop] || state.latestThresholds.Tomato;
+}
+
+function moistureBadge(v, crop = state.cropActive) {
+  const th = getThresholdsForCrop(crop);
+  if (v < th.on) return ['DRY - Irrigation trigger reached', 'badge-dry'];
+  if (v > th.off) return ['ANOXIA RISK - Soil saturation too high', 'badge-anoxia'];
   return ['OPTIMAL - Soil Moisture Within Safe Range', 'badge-optimal'];
 }
  
-function cropBadgeShort(v) {
-  if (v < 30) return ['Dry',     'stat-badge vwc-crop-badge badge-dry'];
-  if (v > 70) return ['Anoxia',  'stat-badge vwc-crop-badge badge-anoxia'];
+function cropBadgeShort(v, crop) {
+  const th = getThresholdsForCrop(crop);
+  if (v < th.on) return ['Dry',     'stat-badge vwc-crop-badge badge-dry'];
+  if (v > th.off) return ['Anoxia',  'stat-badge vwc-crop-badge badge-anoxia'];
   return              ['Optimal', 'stat-badge vwc-crop-badge badge-optimal'];
 }
  
@@ -296,6 +331,15 @@ function onPlantingDateChange() {
   const dateStr = input.value || null;
   state.plantingDates[state.cropActive] = dateStr;
   savePlantingDate(state.cropActive, dateStr);
+
+  const key = state.cropActive === 'Pechay' ? 'planted_date_pechay' : 'planted_date_tomato';
+  apiFetch('/api/settings', {
+    method: 'POST',
+    body: JSON.stringify({ [key]: dateStr || '' })
+  }).catch((error) => {
+    console.error('Failed to sync planting date:', error.message);
+  });
+
   updatePlantAgeDisplay();
 }
  
@@ -304,6 +348,15 @@ function clearPlantingDate() {
   if (input) input.value = '';
   state.plantingDates[state.cropActive] = null;
   savePlantingDate(state.cropActive, null);
+
+  const key = state.cropActive === 'Pechay' ? 'planted_date_pechay' : 'planted_date_tomato';
+  apiFetch('/api/settings', {
+    method: 'POST',
+    body: JSON.stringify({ [key]: '' })
+  }).catch((error) => {
+    console.error('Failed to clear planting date on backend:', error.message);
+  });
+
   updatePlantAgeDisplay();
 }
  
@@ -323,7 +376,7 @@ function updatePlantAgeDisplay() {
   const planted = new Date(dateStr);
   const today   = new Date();
   const days    = Math.max(0, Math.floor((today - planted) / (1000 * 60 * 60 * 24)));
-  const stage   = getPlantStage(days);
+  const stage   = getPlantStage(days, state.cropActive);
  
   ageDays.textContent  = days;
   stageBdg.textContent = stage;
@@ -342,12 +395,12 @@ function refreshCards() {
  
   // ── Tomato VWC row ────────────────────────────
   const tValEl = el('soilMoisture');
-  if (tValEl) tValEl.textContent = showLiveReadings ? `${state.moisture.toFixed(1)}%` : '—';
+  if (tValEl) tValEl.textContent = showLiveReadings ? `${(state.moisture ?? 0).toFixed(1)}%` : '—';
  
   const tBadge = el('moistureBadgeTomato');
   if (tBadge) {
     const [txt, cls] = showLiveReadings
-      ? cropBadgeShort(state.moisture)
+      ? cropBadgeShort(state.moisture, 'Tomato')
       : ['No data', 'stat-badge vwc-crop-badge badge-off'];
     tBadge.textContent = txt;
     tBadge.className   = cls;
@@ -358,9 +411,9 @@ function refreshCards() {
   const pBadge = el('moistureBadgePechay');
   if (pValEl && pBadge) {
     if (showLiveReadings && state.moisturePechay !== null && state.moisturePechay !== undefined) {
-      pValEl.textContent = `${state.moisturePechay.toFixed(1)}%`;
+      pValEl.textContent = `${(state.moisturePechay ?? 0).toFixed(1)}%`;
       pValEl.style.color = 'var(--blue-val)';
-      const [pt, pc]     = cropBadgeShort(state.moisturePechay);
+      const [pt, pc]     = cropBadgeShort(state.moisturePechay, 'Pechay');
       pBadge.textContent = pt;
       pBadge.className   = pc;
     } else {
@@ -372,8 +425,11 @@ function refreshCards() {
   }
  
   // ── Overall soil status badge ─────────────────
+  const activeMoisture = state.cropActive === 'Pechay' && state.moisturePechay !== null
+    ? state.moisturePechay
+    : state.moisture;
   const [bTxt, bCls] = showLiveReadings
-    ? moistureBadge(state.moisture)
+    ? moistureBadge(activeMoisture, state.cropActive)
     : ['No data', 'badge-off'];
   const moistureBadgeEl = el('moistureBadge');
   if (moistureBadgeEl) {
@@ -383,7 +439,7 @@ function refreshCards() {
  
   // ── Temperature gauge ─────────────────────────
   const tempVal = el('gaugeTempVal');
-  if (tempVal) tempVal.textContent = showLiveReadings ? state.temperature.toFixed(1) : '—';
+  if (tempVal) tempVal.textContent = showLiveReadings ? (state.temperature ?? 0).toFixed(1) : '—';
   setArc('tempArc', showLiveReadings ? tempFraction(state.temperature) : 0);
   const tempStatusEl = el('tempStatus');
   if (tempStatusEl) {
@@ -399,7 +455,7 @@ function refreshCards() {
  
   // ── Humidity gauge ────────────────────────────
   const humVal = el('gaugeHumVal');
-  if (humVal) humVal.textContent = showLiveReadings ? state.humidity.toFixed(1) : '—';
+  if (humVal) humVal.textContent = showLiveReadings ? (state.humidity ?? 0).toFixed(1) : '—';
   setArc('humArc', showLiveReadings ? humFraction(state.humidity) : 0);
   const humStatusEl = el('humStatus');
   if (humStatusEl) {
@@ -502,6 +558,23 @@ function refreshCards() {
       }
     }
   }
+
+  const wellWarn = el('wellLowWarning');
+  if (wellWarn) {
+    if (state.wellWaterML === null) {
+      wellWarn.style.display = 'none';
+    } else if (state.wellWaterML < 50) {
+      wellWarn.style.display = 'inline-block';
+      wellWarn.textContent = 'CRITICAL LOW WATER - Pump protection active';
+      wellWarn.className = 'stat-badge badge-anoxia well-low-warning';
+    } else if (state.wellWaterML < 200) {
+      wellWarn.style.display = 'inline-block';
+      wellWarn.textContent = 'LOW WATER - Refill soon';
+      wellWarn.className = 'stat-badge badge-dry well-low-warning';
+    } else {
+      wellWarn.style.display = 'none';
+    }
+  }
  
   // ── ESP32 connection indicator ─────────────────
   const { label: esp32Label, cls: esp32Cls, icon: esp32Icon } = esp32Status();
@@ -535,6 +608,11 @@ function renderCrop(name) {
       `<div class="param-row"><span class="param-key">${k}</span><span class="param-val">${v}</span></div>`
     )
     .join('');
+
+  const soilInfo = el('soilInfoRow');
+  if (soilInfo) {
+    soilInfo.textContent = `Soil: ${state.soilProfile.soilType} | FC: ${state.soilProfile.fc}% | AW: ${state.soilProfile.aw}%`;
+  }
 }
  
 async function selectCrop(name, persist = true) {
@@ -557,7 +635,7 @@ async function selectCrop(name, persist = true) {
   renderCrop(name);
   setManualTargetSelect(name);
   syncPlantingDateInput();    // Change 6: sync date input when switching crop
-  buildLineChart(Number(document.querySelector('.range-select')?.value || 24));
+  buildLineChart(Number(el('rangeTimeSelect')?.value || 24));
   buildBarChart(name);        // Sync History Overview chart to selected crop
  
   if (!persist) return;
@@ -604,7 +682,10 @@ function applyLatestReading(latest) {
  
   if (typeof latest.mode === 'string') {
     const nextMode = latest.mode.trim().toUpperCase();
-    if (nextMode === 'AUTO' || nextMode === 'MANUAL') state.mode = nextMode;
+    if (nextMode === 'AUTO' || nextMode === 'MANUAL') {
+      state.mode = nextMode;
+      state.manualMode = nextMode === 'MANUAL';
+    }
   }
  
   if (latest.moisture_pechay !== undefined) {
@@ -644,7 +725,10 @@ function applySensorPush(payload) {
  
   if (typeof payload.mode === 'string') {
     const nextMode = payload.mode.trim().toUpperCase();
-    if (nextMode === 'AUTO' || nextMode === 'MANUAL') state.mode = nextMode;
+    if (nextMode === 'AUTO' || nextMode === 'MANUAL') {
+      state.mode = nextMode;
+      state.manualMode = nextMode === 'MANUAL';
+    }
   }
  
   if (payload.moisture_pechay !== undefined) {
@@ -691,7 +775,40 @@ async function loadSettings() {
     if (vol       && settings.water_volume_ml    !== undefined) vol.value      = String(clamp(toNumber(settings.water_volume_ml,   300), 30, 1000));
     if (burstDur  && settings.burst_duration_s   !== undefined) burstDur.value = String(clamp(toNumber(settings.burst_duration_s,    5),  1, 30));
     if (burstDly  && settings.burst_delay_s      !== undefined) burstDly.value = String(clamp(toNumber(settings.burst_delay_s,       3),  1, 30));
-    if (threshold && settings.moisture_threshold !== undefined) threshold.value = String(clamp(toNumber(settings.moisture_threshold, 30), 10, 60));
+    if (threshold && settings.moisture_threshold !== undefined) threshold.value = String(clamp(toNumber(settings.moisture_threshold, 60), 10, 99));
+
+    if (settings.moisture_threshold_tomato !== undefined) {
+      state.latestThresholds.Tomato.on = toNumber(settings.moisture_threshold_tomato, state.latestThresholds.Tomato.on);
+    }
+    if (settings.moisture_off_threshold_tomato !== undefined) {
+      state.latestThresholds.Tomato.off = toNumber(settings.moisture_off_threshold_tomato, state.latestThresholds.Tomato.off);
+    }
+    if (settings.moisture_threshold_pechay !== undefined) {
+      state.latestThresholds.Pechay.on = toNumber(settings.moisture_threshold_pechay, state.latestThresholds.Pechay.on);
+    }
+    if (settings.moisture_off_threshold_pechay !== undefined) {
+      state.latestThresholds.Pechay.off = toNumber(settings.moisture_off_threshold_pechay, state.latestThresholds.Pechay.off);
+    }
+
+    if (typeof settings.planted_date_tomato === 'string' && settings.planted_date_tomato.length > 0) {
+      state.plantingDates.Tomato = settings.planted_date_tomato;
+    }
+    if (typeof settings.planted_date_pechay === 'string' && settings.planted_date_pechay.length > 0) {
+      state.plantingDates.Pechay = settings.planted_date_pechay;
+    }
+
+    try {
+      const soil = await apiFetch('/api/settings/soil');
+      state.soilProfile = {
+        soilType: String(soil.soilType || 'Regular loam'),
+        fc: toNumber(soil.fc, 29),
+        pwp: toNumber(soil.pwp, 12),
+        aw: toNumber(soil.aw, 17),
+        sensorCalibrated: !!soil.sensorCalibrated
+      };
+    } catch (error) {
+      console.error('Failed to load soil settings:', error.message);
+    }
  
     setControlDisplayValues();
  
@@ -721,6 +838,7 @@ async function toggleManualMode() {
   const sw = el('manualModeSwitch');
   if (!sw) return;
   state.manualMode = sw.checked;
+  state.mode = state.manualMode ? 'MANUAL' : 'AUTO';
   refreshCards();
   try {
     await apiFetch('/api/pump/mode', {
@@ -858,8 +976,8 @@ async function buildLineChart(hours = 24) {
           tension:              0.4
         },
         {
-          label: 'Optimal',
-          data: Array(labels.length).fill(40),
+          label: 'Upper target',
+          data: Array(labels.length).fill(getThresholdsForCrop(state.activeChartCrop).off),
           borderColor: C_GREEN_MID,
           borderWidth: 1.5,
           borderDash:  [6, 4],
@@ -867,8 +985,8 @@ async function buildLineChart(hours = 24) {
           fill:        false
         },
         {
-          label: 'Low threshold',
-          data: Array(labels.length).fill(20),
+          label: 'Irrigation trigger',
+          data: Array(labels.length).fill(getThresholdsForCrop(state.activeChartCrop).on),
           borderColor: C_ORANGE,
           borderWidth: 1.5,
           borderDash:  [4, 4],
@@ -892,7 +1010,7 @@ async function buildLineChart(hours = 24) {
         },
         y: {
           min: 0,
-          max: 80,
+          max: 100,
           title: { display: true, text: `${state.activeChartCrop} Moisture (%)`, color: C_TICK, font: { size: 9 } },
           ticks: { color: C_TICK, font: { size: 9 }, callback: (v) => v, maxTicksLimit: 6 },
           grid:  { color: C_GRID }
@@ -926,6 +1044,10 @@ async function buildBarChart(crop) {
   if (!ctx) return;
  
   if (barChart) barChart.destroy();
+
+  const barColor = selectedCrop === 'Pechay' ? '#185fa5' : C_GREEN_ACCENT;
+  const barColorAlt = selectedCrop === 'Pechay' ? 'rgba(24,95,165,0.65)' : C_GREEN_MID;
+  const barTextColor = selectedCrop === 'Pechay' ? '#185fa5' : C_GREEN_MID;
  
   barChart = new Chart(ctx, {
     type: 'bar',
@@ -933,9 +1055,9 @@ async function buildBarChart(crop) {
       labels: days,
       datasets: [
         {
-          label: 'Avg moisture (%)',
+          label: `${selectedCrop} Avg Moisture (%)`,
           data:  averages,
-          backgroundColor: days.map((_, i) => (i % 2 === 0 ? C_GREEN_ACCENT : C_GREEN_MID)),
+          backgroundColor: days.map((_, i) => (i % 2 === 0 ? barColor : barColorAlt)),
           borderRadius:    5,
           borderSkipped:   false
         }
@@ -951,7 +1073,7 @@ async function buildBarChart(crop) {
       scales: {
         x: { ticks: { color: C_TICK, font: { size: 10 } }, grid: { display: false } },
         y: {
-          min: 0, max: 80,
+          min: 0, max: 100,
           ticks: { color: C_TICK, font: { size: 9 }, callback: (v) => v, maxTicksLimit: 6 },
           grid:  { color: C_GRID }
         }
@@ -964,7 +1086,7 @@ async function buildBarChart(crop) {
           const { ctx: chartCtx, data: chartData } = chart;
           chartCtx.save();
           chartCtx.font      = '600 11px DM Sans,sans-serif';
-          chartCtx.fillStyle = C_GREEN_MID;
+          chartCtx.fillStyle = barTextColor;
           chartCtx.textAlign = 'center';
           chart.getDatasetMeta(0).data.forEach((bar, i) => {
             chartCtx.fillText(`${chartData.datasets[0].data[i]}%`, bar.x, bar.y - 5);
@@ -983,7 +1105,7 @@ function updateRange(hours) {
  
 function updateChartCrop(crop) {
   state.activeChartCrop = crop;
-  const hours = Number(document.querySelector('.range-select')?.value || 24);
+  const hours = Number(el('rangeTimeSelect')?.value || 24);
   buildLineChart(hours);
 }
  
@@ -1033,7 +1155,7 @@ function bindControlListeners() {
     try {
       await apiFetch('/api/settings/moisture-threshold', {
         method: 'POST',
-        body: JSON.stringify({ vwc: toNumber(value, 30) })
+        body: JSON.stringify({ vwc: toNumber(value, 60) })
       });
     } catch (error) { console.error('Failed to update moisture threshold:', error.message); }
   }, 350);
@@ -1087,7 +1209,7 @@ function connectWebSocket() {
         applySensorPush(payload.data);
         state.dataLogged += 1;
         refreshCards();
-        await buildLineChart(Number(document.querySelector('.range-select')?.value || 24));
+        await buildLineChart(Number(el('rangeTimeSelect')?.value || 24));
         await buildBarChart(state.activeHistoryCrop);
       }
  
@@ -1107,6 +1229,7 @@ function connectWebSocket() {
         const nextMode = typeof payload.data?.mode === 'string' ? payload.data.mode.trim().toUpperCase() : '';
         if (nextMode === 'AUTO' || nextMode === 'MANUAL') {
           state.mode = nextMode;
+          state.manualMode = nextMode === 'MANUAL';
           refreshCards();
         }
       }
@@ -1136,6 +1259,37 @@ function startRuntimeTicker() {
     refreshCards();
   }, 1000);
 }
+
+function showView(view) {
+  const dashboardView = el('viewDashboard');
+  const membersView = el('viewMembers');
+  const navDashboard = el('navDashboard');
+  const navMembers = el('navMembers');
+  const memberCards = membersView ? membersView.querySelectorAll('.member-card') : [];
+
+  if (dashboardView) dashboardView.style.display = 'none';
+  if (membersView) membersView.style.display = 'none';
+  memberCards.forEach((card) => card.classList.remove('member-visible'));
+
+  navDashboard?.classList.remove('active');
+  navMembers?.classList.remove('active');
+
+  if (view === 'members') {
+    if (membersView) {
+      membersView.style.display = 'block';
+      window.requestAnimationFrame(() => {
+        memberCards.forEach((card) => card.classList.add('member-visible'));
+      });
+    }
+    navMembers?.classList.add('active');
+    return;
+  }
+
+  if (dashboardView) dashboardView.style.display = 'block';
+  navDashboard?.classList.add('active');
+}
+
+window.showView = showView;
  
 /* ---- Init ---- */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1152,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([
     fetchLatest(),
     fetchCommandState(),
-    buildLineChart(Number(document.querySelector('.range-select')?.value || 24)),
+    buildLineChart(Number(el('rangeTimeSelect')?.value || 24)),
     buildBarChart(state.activeHistoryCrop),  // Change 5: pass active history crop
     fetchComfortIndex()
   ]);
