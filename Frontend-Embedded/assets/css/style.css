@@ -54,6 +54,38 @@ html, body {
   color: #86efac; letter-spacing: -.3px;
 }
 .nav-subtitle { font-size: 1rem; color: rgba(255,255,255,.5); font-weight: 500; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.nav-link {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: transparent;
+  color: rgba(255, 255, 255, .92);
+  border-radius: 999px;
+  padding: .45rem .9rem;
+  font-size: .88rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .5);
+}
+
+.nav-link.active {
+  background: rgba(134, 239, 172, .15);
+  border-color: rgba(134, 239, 172, .35);
+  color: #86efac;
+  font-weight: 600;
+}
  
 /* ── Base stat card ───────────────────────────── */
 .stat-card {
@@ -382,6 +414,7 @@ html, body {
 @media (max-width:576px) {
   .agro-nav { flex-wrap:wrap; gap:.3rem; }
   .nav-subtitle { font-size:.72rem; }
+  .nav-links { width: 100%; justify-content: flex-end; }
   .vwc-value { font-size:1.6rem; }
   .env-divider { display:none; }
   .comfort-key { min-width:90px; }
@@ -794,6 +827,9 @@ html, body {
   background: var(--green-mid);
   transition: width .5s ease, background .4s ease;
 }
+.well-low-warning {
+  margin-top: 8px;
+}
 .plant-age-row {
   display: flex;
   align-items: center;
@@ -900,6 +936,122 @@ html, body {
   border: 1px solid #f0c040;
   font-weight: 700;
   letter-spacing: .06em;
+}
+
+/* ── Members grid & cards ────────────────────── */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+}
+
+@keyframes memberFadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.member-card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: .85rem .85rem .9rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: unset;
+  text-align: unset;
+  gap: unset;
+  opacity: 0;
+  transform: none;
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.member-card.member-visible {
+  animation: memberFadeUp .5s ease forwards;
+}
+
+.member-card.member-visible:nth-child(1) { animation-delay: .05s; }
+.member-card.member-visible:nth-child(2) { animation-delay: .13s; }
+.member-card.member-visible:nth-child(3) { animation-delay: .21s; }
+.member-card.member-visible:nth-child(4) { animation-delay: .29s; }
+.member-card.member-visible:nth-child(5) { animation-delay: .37s; }
+.member-card.member-visible:nth-child(6) { animation-delay: .45s; }
+.member-card.member-visible:nth-child(7) { animation-delay: .53s; }
+.member-card.member-visible:nth-child(8) { animation-delay: .61s; }
+
+.member-card:hover {
+  transform: translateY(-7px);
+  border-color: var(--green-accent);
+  box-shadow:
+    0 10px 28px rgba(30,70,30,.16),
+    0 0 0 3px rgba(151,196,89,.18),
+    0 0 18px rgba(151,196,89,.22);
+}
+
+.member-card:hover .member-photo-frame {
+  border-color: #86efac;
+  box-shadow: 0 0 10px rgba(134,239,172,.35);
+}
+
+.member-photo-frame {
+  width: 100%;
+  aspect-ratio: 3 / 3.5;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  background: var(--green-header);
+  margin-bottom: .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color .25s ease, box-shadow .25s ease;
+}
+
+.member-photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 6px;
+  width: 100%;
+}
+
+.member-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.member-badge {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 2px 12px;
+  border-radius: 20px;
+  background: var(--green-light);
+  color: var(--green-dark);
+  border: 1px solid var(--green-soft);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+@media (max-width: 768px) {
+  .members-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .members-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: .7rem;
+  }
 }
 
 @media (max-width: 768px) {
